@@ -9,7 +9,7 @@ local AIM_SPEED = 0.15
 
 -- UI LIBRARY
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/youngstar"))()
-local Window = library:CreateWindow("Aimbot")
+local Window = library:CreateWindow("AimElite")
 
 -- GUI VISUAL E MENSAGEM DEV
 local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
