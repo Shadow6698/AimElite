@@ -1,0 +1,152 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local ativo = false
+local FOV_RADIUS = 150
+local AIM_SPEED = 0.15
+
+-- UI LIBRARY
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/youngstar"))()
+local Window = library:CreateWindow("Aimbot")
+
+-- GUI VISUAL E MENSAGEM DEV
+local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+gui.Name = "AimbotVisual"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+
+-- Mensagem Devs temporária (2 segundos)
+local devLabel = Instance.new("TextLabel", gui)
+devLabel.Size = UDim2.new(0, 250, 0, 20)
+devLabel.Position = UDim2.new(0, 10, 1, -25)
+devLabel.Text = "Devs = davikkkjjj7 / Nightmare"
+devLabel.TextColor3 = Color3.new(1, 1, 1)
+devLabel.TextSize = 13
+devLabel.BackgroundTransparency = 1
+devLabel.Font = Enum.Font.SourceSansItalic
+devLabel.TextXAlignment = Enum.TextXAlignment.Left
+task.delay(2, function()
+	if devLabel then devLabel:Destroy() end
+end)
+
+-- FOV Circle visual
+local fovCircle = Instance.new("Frame", gui)
+fovCircle.Size = UDim2.new(0, FOV_RADIUS * 2, 0, FOV_RADIUS * 2)
+fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+fovCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+fovCircle.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+fovCircle.BackgroundTransparency = 0.7
+fovCircle.BorderSizePixel = 0
+fovCircle.Visible = false
+Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
+
+-- Funções
+local function isEnemy(player)
+	return player ~= LocalPlayer and player.Team ~= LocalPlayer.Team
+end
+
+local function clearAllESP()
+	for _, player in pairs(Players:GetPlayers()) do
+		if player.Character and player.Character:FindFirstChild("ESPBox") then
+			player.Character.ESPBox:Destroy()
+		end
+	end
+end
+
+local function criarESP(player)
+	if not player.Character or player.Character:FindFirstChild("ESPBox") then return end
+	local esp = Instance.new("BillboardGui")
+	esp.Name = "ESPBox"
+	esp.Adornee = player.Character:WaitForChild("HumanoidRootPart")
+	esp.Size = UDim2.new(4, 0, 5, 0)
+	esp.AlwaysOnTop = true
+	esp.Parent = player.Character
+
+	local frame = Instance.new("Frame", esp)
+	frame.Size = UDim2.new(1, 0, 1, 0)
+	frame.BackgroundColor3 = (player.Team and player.Team.TeamColor and player.Team.TeamColor.Color) or Color3.fromRGB(255, 0, 0)
+	frame.BackgroundTransparency = 0.4
+	frame.BorderSizePixel = 1
+	frame.BorderColor3 = Color3.new(1, 1, 1)
+end
+
+local function aplicarESP()
+	for _, player in pairs(Players:GetPlayers()) do
+		if isEnemy(player) and player.Character then
+			criarESP(player)
+		end
+		player.CharacterAdded:Connect(function()
+			task.wait(1)
+			if isEnemy(player) then
+				criarESP(player)
+			end
+		end)
+	end
+end
+
+local function getClosestEnemy()
+	local closestDist = math.huge
+	local target = nil
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if isEnemy(player) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local pos = player.Character.HumanoidRootPart.Position
+			local screenPos, onScreen = Camera:WorldToViewportPoint(pos)
+			if onScreen then
+				local dist = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+				if dist < FOV_RADIUS and dist < closestDist then
+					closestDist = dist
+					target = player
+				end
+			end
+		end
+	end
+
+	return target
+end
+
+-- Loop Aimbot
+RunService.RenderStepped:Connect(function()
+	fovCircle.Size = UDim2.new(0, FOV_RADIUS * 2, 0, FOV_RADIUS * 2)
+	fovCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+	fovCircle.Visible = ativo
+
+	if not ativo then return end
+
+	local target = getClosestEnemy()
+	if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+		local targetPos = target.Character.HumanoidRootPart.Position
+		local direction = (targetPos - Camera.CFrame.Position).Unit
+		local newCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + direction)
+		Camera.CFrame = Camera.CFrame:Lerp(newCFrame, AIM_SPEED)
+	end
+end)
+
+-- BOTÕES UI (YoungStar)
+Window:Toggle("Ativar Aimbot + ESP", function(state)
+	ativo = state
+	if ativo then
+		aplicarESP()
+	else
+		clearAllESP()
+		fovCircle.Visible = false
+	end
+end)
+
+Window:Box("FOV (50 a 300)", function(val)
+	local number = tonumber(val)
+	if number then
+		FOV_RADIUS = math.clamp(number, 50, 300)
+	end
+end)
+
+Window:Button("Aumentar FOV +20", function()
+	FOV_RADIUS = math.clamp(FOV_RADIUS + 20, 50, 300)
+end)
+
+Window:Button("Diminuir FOV -20", function()
+	FOV_RADIUS = math.clamp(FOV_RADIUS - 20, 50, 300)
+end)
